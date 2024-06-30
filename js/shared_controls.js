@@ -556,7 +556,9 @@ function smogonAnalysis(pokemonName) {
 	var generation = ["rb", "gs", "rs", "dp", "bw", "xy", "sm", "ss", "sv"][gen - 1];
 	return "https://smogon.com/dex/" + generation + "/pokemon/" + pokemonName.toLowerCase() + "/";
 }
-
+function sortmons(a,b){
+	return parseInt(a.split("[")[1].split("]")[0]) - parseInt(b.split("[")[1].split("]")[0])
+}
 // auto-update set details on select
 $(".set-selector").change(function () {
 	var fullSetName = $(this).val();
@@ -566,30 +568,19 @@ $(".set-selector").change(function () {
 		CURRENT_TRAINER_POKS = get_trainer_poks(fullSetName)
 
 
-	var next_poks = CURRENT_TRAINER_POKS
+		var next_poks = CURRENT_TRAINER_POKS.sort()
 
 	var trpok_html = ""
-	for (i in next_poks ) {
-		if (next_poks[i][0].includes($('input.opposing').val())){
-			continue
+	for (var i in next_poks) {
+		if (next_poks[i][0].includes($('input.opposing').val())) {
+			continue;
 		}
-		var pok_name = next_poks[i].split(" (")[0]
+		var pok_name = next_poks[i].split("]")[1].split(" (")[0];
 		if (pok_name == "Zygarde-10%") {
-			pok_name = "Zygarde-10%25"
+			pok_name = "Zygarde-10%25";
 		}
-		if (pok_name == "Sirfetch\u2019d") {
-			pok_name = "Sirfetch'd"
-		}
-		if (pok_name == "Farfetch\u2019d") {
-			pok_name = "Farfetch'd"
-		}
-		if (pok_name == "Farfetch\u2019d-Galar") {
-			pok_name = "Farfetch'd-Galar"
-		}
-
-		
-		var pok = `<img class="trainer-pok right-side" src="https://raw.githubusercontent.com/KinglerChamp/Sprites-for-calc/master/${pok_name}.png" data-id="${CURRENT_TRAINER_POKS[i].split("[")[0]}" title="${next_poks[i]}, ${next_poks[i]} BP">`
-		trpok_html += pok
+		var pok = `<img class="trainer-pok right-side" src="https://raw.githubusercontent.com/KinglerChamp/Sprites-for-calc/master/${pok_name}.png" data-id="${CURRENT_TRAINER_POKS[i].split("]")[1]}" title="${next_poks[i]}, ${next_poks[i]} BP">`
+		trpok_html += pok;
 	}
 }
 
@@ -1663,9 +1654,16 @@ function get_trainer_names() {
     all_sets.forEach(function(set) {
         for (const [pok_name, poks] of Object.entries(set)) {
             var pok_tr_names = Object.keys(poks);
-            for (i in pok_tr_names) {
+            for (var i = 0; i < pok_tr_names.length; i++) {
+                var index = poks[pok_tr_names[i]]["index"];
                 var trainer_name = pok_tr_names[i];
-                trainer_names.push(`${pok_name} (${trainer_name})`);
+
+                // Skip "Custom Set" entries
+                if (trainer_name.includes("Custom Set")) {
+                    trainer_names.push(`${pok_name} (${trainer_name})`);
+                } else {
+                    trainer_names.push(`[${index}]${pok_name} (${trainer_name})`);
+                }
             }
         }
     });
@@ -1673,6 +1671,10 @@ function get_trainer_names() {
     return trainer_names;
 }
 
+
+
+
+// Example usage:
 var names = get_trainer_names();
 console.log("Trainer Names:", names);
 
@@ -1744,6 +1746,74 @@ function get_trainer_poks(trainer_name)
     }
     return matches
 }
+var all_sets = [
+    {}, 
+    typeof SETDEX_RBY === 'undefined' ? {} : SETDEX_RBY,
+    typeof SETDEX_GSC === 'undefined' ? {} : SETDEX_GSC,
+    typeof SETDEX_ADV === 'undefined' ? {} : SETDEX_ADV,
+    typeof SETDEX_DPP === 'undefined' ? {} : SETDEX_DPP,
+    typeof SETDEX_BW === 'undefined' ? {} : SETDEX_BW,
+    typeof SETDEX_XY === 'undefined' ? {} : SETDEX_XY,
+    typeof SETDEX_SM === 'undefined' ? {} : SETDEX_SM,
+    typeof SETDEX_SS === 'undefined' ? {} : SETDEX_SS,
+    typeof SETDEX_SV === 'undefined' ? {} : SETDEX_SV
+];
+
+function previousTrainer() {
+    var string = $(".trainer-pok-list-opposing").html();
+    var value = parseInt(string.split("]")[0].split("[")[1]) - 1;
+
+    for (var set of all_sets) {
+        for (const [pok_name, poks] of Object.entries(set)) {
+            var pok_tr_names = Object.keys(poks);
+            for (var i = 0; i < pok_tr_names.length; i++) {
+                var index = poks[pok_tr_names[i]]["index"];
+                if (index == value) {
+                    var set = `${pok_name} (${pok_tr_names[i]})`;
+                    $('.opposing').val(set);
+                    $('.opposing').change();
+                    $('.opposing .select2-chosen').text(set);
+                    return;  // Exit once the correct trainer is found
+                }
+            }
+        }
+    }
+}
+
+var previousTrainerButton = document.getElementById('previous-trainer');
+previousTrainerButton.innerText = 'Previous Trainer';
+previousTrainerButton.addEventListener('click', previousTrainer);
+
+function nextTrainer() {
+    var string = $(".trainer-pok-list-opposing").html();
+    var initialSplit = string.split("[");
+    var value = parseInt(initialSplit[initialSplit.length - 2].split("]")[0]) + 1;
+
+    console.log("Value:", value);  // Add this console log statement
+
+    for (var set of all_sets) {
+        for (const [pok_name, poks] of Object.entries(set)) {
+            var pok_tr_names = Object.keys(poks);
+            for (var i = 0; i < pok_tr_names.length; i++) {
+                var index = poks[pok_tr_names[i]]["index"];
+                if (index == value) {
+                    var set = `${pok_name} (${pok_tr_names[i]})`;
+                    $('.opposing').val(set);
+                    $('.opposing').change();
+                    $('.opposing .select2-chosen').text(set);
+                    return;  // Exit once the correct trainer is found
+                }
+            }
+        }
+    }
+}
+
+var nextTrainerButton = document.getElementById('next-trainer');
+nextTrainerButton.innerText = 'Next Trainer';
+nextTrainerButton.addEventListener('click', nextTrainer);
+
+
+
 
 $(document).on('click', '.right-side', function() {
 	var set = $(this).attr('data-id')
